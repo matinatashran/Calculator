@@ -1,4 +1,4 @@
-import React, { useReducer, useState } from 'react';
+import React, { useReducer } from 'react';
 
 // style
 import style from './calculator.module.css';
@@ -7,7 +7,7 @@ import style from './calculator.module.css';
 import CalcButton from './shared/CalcButton';
 
 // helper
-import { replaceOP } from '../helper/functions';
+import { addBraces } from '../helper/functions';
 
 const buttons = [
     {name: "CE", type: "REMOVE"}, {name: "C", type: "REMOVE"}, {name: "←", type: "REMOVE"}, {name: "/", type: "OPERATOR"},
@@ -17,22 +17,20 @@ const buttons = [
     {name: "±", type: "MARK"}, {name: 0, type: "NUMBER"}, {name: ".", type: "DOT"}, {name: "=", type: "EQUAL"},
 ]
 
-const a = "3*4*53+2423"
-for(let i= a.length ; i >= 0; i--){
-    if (a[i] === "+" || a[i] === "/" || a[i] === "*" || a[i] === "-"){
-        const index = a.indexOf(a[i]);
-        const b = a.substring(0, index + 1)
-    }
-}
-
 const initialResult = "0";
 let flag = 0;
 const reducer = (result, action) => {
     // ------ ch: charactor ------
-    
+
+    // length of result
     const resultLen = result.length;
+
+    // lastIndex: last index of result
     const lastIndex = resultLen - 1;
+
+    // lastCH: last charactor of result
     const lastCH = result[lastIndex];
+    
     switch(action.type){
         case "NUMBER":
             if (result === "0" || flag === 1){
@@ -45,8 +43,14 @@ const reducer = (result, action) => {
             return result;
 
         case "OPERATOR":
+            flag = 0;
+        
             if (result === "0")
                 result = `0${action.ch}`;
+            
+            if (lastCH === "."){
+                result = result.substring(0, lastIndex) + action.ch;
+            }
 
             else if (lastCH === "*" || lastCH === "/" || lastCH === "-" || lastCH === "+")
                 result = result.substring(0, lastIndex) + action.ch
@@ -60,24 +64,15 @@ const reducer = (result, action) => {
             flag = 1;
 
             if (lastCH === "*" || lastCH === "/" || lastCH === "-" || lastCH === "+"){
-                const num = eval(result.substring(0, lastIndex));
+                const num = eval(addBraces(result.substring(0, lastIndex), resultLen));
                 result = `${num}${lastCH}${num}`;
             }
 
             if (result.includes("--")){
-                let len = resultLen;
-                for(let i= 0; i< len; i++){
-                    let index;
-                    if (result.indexOf("--") > 0){
-                        index = result.indexOf("--")
-                        result = result.substring(0, index + 1) + `(${result.substring(index + 1, index + 3)})` + result.substring(index + 3, len)
-
-                        len = resultLen;
-                    }
-                }
+                result = addBraces(result, resultLen);
             }
 
-            return String(eval(result));
+            return String(eval(result).toLocaleString());
         
         case "REMOVE":
             if (action.ch === "←"){
@@ -91,7 +86,7 @@ const reducer = (result, action) => {
                 result = "0";
 
             else
-                for(let i= resultLen; i >= 0; i--){
+                for(let i= lastIndex; i >= 0; i--){
                     if (result[i] === "+" || result[i] === "/" || result[i] === "*" || result[i] === "-"){
                         if (result[i - 1] === "+" || result[i - 1] === "/" || result[i - 1] === "*" || result[i - 1] === "-")
                             result = result.substring(0, i);
@@ -107,33 +102,42 @@ const reducer = (result, action) => {
         case "DOT":
             if (result === "0")
                 result = "0.";
-            
-            if (result[lastIndex] !== "."){
-                result += action.ch;
-            }
-            else{
-                for (let i= resultLen; i >= 0; i--){
-                    if (result[i] === "+" || result[i] === "/" || result[i] === "*" || result[i] === "-"){
-                        for (let j= resultLen; j >= i; j--){
-                            if (result[j] !== "."){
-                                // result += action.ch;
-                            }
-                        }
 
+            else{
+                for (let i= lastIndex; i >= 0; i--){
+                    if (result[i] === "+" || result[i] === "/" || result[i] === "*" || result[i] === "-"){
+                        const subResult = result.substring(i + 1, resultLen);
+                        if (!subResult.includes(".")){
+                            if (!subResult)
+                                result += "0.";
+                            else
+                                result += action.ch;
+                            break;
+                        }
+                    }
+                    else if (!result.includes(".")){
+                        result += action.ch;
                         break;
                     }
                 }
             }
 
-            if (result[lastIndex].includes("0123456789")){
-                console.log(1)
-            }
+            return result;
         
         case "MARK":
+            flag = 1;
+
             if (Number(result) < 0 || (!result.includes("+") && !result.includes("-") && !result.includes("*") && !result.includes("/"))){
                 result = eval(`-1*${result}`);
             }
-
+            else if (lastCH === "+" || lastCH === "/" || lastCH === "*" || lastCH === "-"){
+                const op = lastCH;
+                
+                const num = `${eval(addBraces(result.substring(0, lastIndex), resultLen - 1))}`;
+                result = num + op + `${eval(-1*num)}`;
+                result = addBraces(result, result.length);
+            }
+            // 25*236--25+965/
             else{
                 let num;
                 let index;
@@ -153,6 +157,7 @@ const reducer = (result, action) => {
                 num = eval(`-1*${num}`);
                 result = `${result.substring(0, index)}${num}`;
             }
+            flag = 0;
 
             return String(result);
 
@@ -164,7 +169,6 @@ const reducer = (result, action) => {
 
 const Calculator = () => {
 
-    // const [result, setResult] = useState(0);
     const [result, dispatch] = useReducer(reducer, initialResult);
 
     return (
