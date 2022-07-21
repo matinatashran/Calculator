@@ -48,13 +48,12 @@ const reducer = (result, action) => {
             if (result === "0")
                 result = `0${action.ch}`;
             
-            if (lastCH === "."){
+            else if (lastCH === ".")
                 result = result.substring(0, lastIndex) + action.ch;
-            }
-
+        
             else if (lastCH === "*" || lastCH === "/" || lastCH === "-" || lastCH === "+")
                 result = result.substring(0, lastIndex) + action.ch
-
+            
             else
                 result += action.ch
             
@@ -100,6 +99,7 @@ const reducer = (result, action) => {
             return result;
         
         case "DOT":
+            flag = 0;
             if (result === "0")
                 result = "0.";
 
@@ -137,7 +137,7 @@ const reducer = (result, action) => {
                 result = num + op + `${eval(-1*num)}`;
                 result = addBraces(result, result.length);
             }
-            // 25*236--25+965/
+           
             else{
                 let num;
                 let index;
@@ -173,8 +173,10 @@ const Calculator = () => {
 
     return (
         <div className={style.calculatorContainer}>
-            <div className={style.display}>
-                {result}
+            <div className={style.displayBox}>
+                <span className={style.display}>
+                    {result}
+                </span>
             </div>
             <div className={style.buttonsBox}>
                 {
